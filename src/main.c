@@ -1,5 +1,6 @@
 #include "./ip_utils.h"
 #include "./mask_utils.h"
+#include "./network.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -52,4 +53,12 @@ int main(int argc, char *argv[]){
 
     printf("IP: %s\nMask: %s\n", ip_str, mask_str);
 
+    char ip_str_network[INET_ADDRSTRLEN];
+    char ip_str_broadcast[INET_ADDRSTRLEN];
+
+    Network network = create_network(ip, mask);
+    ip_uint32_to_str(network.networkIP, ip_str_network);
+    ip_uint32_to_str(network.broadcastIP, ip_str_broadcast);
+
+    printf("IP network: %s\nIP broadcast: %s\n", ip_str_network, ip_str_broadcast);
 }

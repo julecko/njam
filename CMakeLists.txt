@@ -31,6 +31,7 @@ add_executable(njam
     src/main.c
     src/ip_utils.c
     src/mask_utils.c
+    src/network.c
 )
 
 target_include_directories(njam PRIVATE
