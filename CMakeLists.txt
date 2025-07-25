@@ -29,6 +29,8 @@ endif()
 # Executable 1: njam
 add_executable(njam
     src/main.c
+    src/ip_utils.c
+    src/mask_utils.c
 )
 
 target_include_directories(njam PRIVATE
