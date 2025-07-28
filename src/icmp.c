@@ -13,7 +13,10 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netdb.h>
-#include <sys/select.h>
+#include <time.h>
+
+#define TIMEOUT 2
+#define BUFFER_SIZE 1024
 
 static unsigned short checksum(void *b, int len) {
     unsigned short *buf = b;
@@ -59,17 +62,29 @@ void icmp_scan_network(uint32_t network_ip, uint32_t broadcast_ip) {
 
     for (uint32_t ip = network_ip + 1; ip < broadcast_ip; ip++) {
         send_ping(sockfd, ip, ident);
+        usleep(1000);
     }
 
     printf("Waiting for replies...\n");
-    sleep(2);
 
-    char recvbuf[1024];
-    while (1) {
+    char recvbuf[BUFFER_SIZE];
+    time_t start_time = time(NULL);
+    while (time(NULL) - start_time <= TIMEOUT) {
         struct sockaddr_in addr;
         socklen_t len = sizeof(addr);
         ssize_t n = recvfrom(sockfd, recvbuf, sizeof(recvbuf), 0, (struct sockaddr *)&addr, &len);
-        if (n <= 0) break;
+        
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                usleep(10000);
+                continue;
+            } else {
+                perror("recvfrom");
+                break;
+            }
+        } else if (n == 0) {
+            break;
+        }
 
         struct iphdr *ip_hdr = (struct iphdr *)recvbuf;
         struct icmphdr *icmp = (struct icmphdr *)(recvbuf + ip_hdr->ihl * 4);
