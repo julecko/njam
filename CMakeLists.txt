@@ -32,6 +32,7 @@ add_executable(njam
     src/ip_utils.c
     src/mask_utils.c
     src/network.c
+    src/icmp.c
 )
 
 target_include_directories(njam PRIVATE

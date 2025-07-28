@@ -1,6 +1,7 @@
 #include "./ip_utils.h"
 #include "./mask_utils.h"
 #include "./network.h"
+#include "./icmp.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -61,4 +62,7 @@ int main(int argc, char *argv[]){
     ip_uint32_to_str(network.broadcastIP, ip_str_broadcast);
 
     printf("IP network: %s\nIP broadcast: %s\n", ip_str_network, ip_str_broadcast);
+
+    // Does automatic arp mac resolving, which should be done manually to prevent double mac discovery later in actual arp spoofer
+    icmp_scan_network(network.networkIP, network.broadcastIP);
 }
