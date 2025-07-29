@@ -33,6 +33,7 @@ add_executable(njam
     src/mask_utils.c
     src/network.c
     src/icmp.c
+    src/arp.c
 )
 
 target_include_directories(njam PRIVATE
@@ -42,6 +43,7 @@ target_include_directories(njam PRIVATE
 target_compile_definitions(njam PUBLIC VERSION=\"${NJAM_VERSION}\")
 
 
+# Prepare dpkg packaging
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CPACK_PACKAGE_NAME "njam")
     set(CPACK_PACKAGE_VERSION "${NJAM_VERSION}")
