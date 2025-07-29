@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
+#include <unistd.h>
 
 #include <arpa/inet.h>
 
@@ -50,6 +51,13 @@ int main(int argc, char *argv[]){
     }
 
     Network network = create_network(ip, mask);
-    send_hardcoded_arp("wlan0");
 
+    uint8_t broadcast_mac[6] = {0xff,0xff,0xff,0xff,0xff,0xff};
+    uint8_t zero_mac[6] = {0,0,0,0,0,0};
+    uint8_t my_mac[6];
+
+    get_interface_mac("wlan0", my_mac);
+
+    uint8_t victim_mac[6] = {0x00, 0x0c, 0x29, 0xab, 0xcd, 0xef};
+    arp_send_reply("wlan0", my_mac, "192.168.0.1", my_mac, "192.168.0.1");
 }
