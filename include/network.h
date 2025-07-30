@@ -23,5 +23,6 @@ void free_network(Network network);
 void print_network(Network network);
 size_t network_find_by_ip(Network network, uint32_t ip);
 size_t network_count_alive(Network network);
+int print_network_nice(Network network);
 
 #endif
