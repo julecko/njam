@@ -77,3 +77,32 @@ void print_network(Network network) {
     }
 }
 
+size_t network_find_by_ip(Network network, uint32_t ip) {
+    if (!network.devices || network.device_count == 0) {
+        return -1;
+    }
+
+    for (size_t i = 0; i < network.device_count; i++) {
+        if (network.devices[i].ip == ip) {
+            return (int)i;
+        }
+    }
+
+    return -1;
+}
+
+void network_set_dead(Network network) {
+    for (size_t i = 0;i<network.device_count;i++) {
+        network.devices[i].alive = false;
+    }
+}
+
+size_t network_count_alive(Network network) {
+    size_t counter = 0;
+    for (size_t i = 0;i<network.device_count;i++) {
+        if (network.devices[i].alive) {
+            counter++;
+        }
+    }
+    return counter;
+}

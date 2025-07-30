@@ -53,20 +53,13 @@ int main(int argc, char *argv[]){
     Network network = create_network(ip, mask);
 
     uint8_t my_mac[6];
-
-    const char* my_ip = "192.168.0.135";
-    uint32_t my_ip_num;
-    ip_str_to_uint32(my_ip, &my_ip_num);
-    const char* target_ip = "192.168.0.153";
-    uint32_t target_ip_num;
-    ip_str_to_uint32(target_ip, &target_ip_num);
-
-    my_ip_num = htonl(my_ip_num);
-    target_ip_num = htonl(target_ip_num);
-
     get_interface_mac("wlan0", my_mac);
 
-    //uint8_t victim_mac[6] = {0x74, 0xda, 0x88, 0xe1, 0x8b, 0xfc};
-    //arp_send_reply("wlan0", my_mac, "192.168.0.153", victim_mac, "192.168.0.1");
-    arp_send_request("wlan0", my_mac, &my_ip_num, &target_ip_num);
+
+    int sockfd = arp_create_socket();
+    arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
+    print_network(network);
+
+    printf("Devices alive %lu", network_count_alive(network));
+    free_network(network);
 }

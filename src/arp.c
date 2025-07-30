@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 
-#include "arp.h"
+#include "./arp.h"
+#include "./network.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -84,7 +85,21 @@ void set_arp_header(struct arp_hdr *arp,
     memcpy(arp->tpa, target_ip, IP_LEN);
 }
 
-int send_arp_packet(const char *iface_name,
+int arp_create_socket() {
+    int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ARP));
+    if (sockfd < 0) {
+        perror("socket");
+    }
+
+    struct timeval timeout = { .tv_sec = 1, .tv_usec = 0 };
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+    return sockfd;
+}
+
+
+int send_arp_packet(int sockfd,
+                    const char *iface_name,
                     const uint8_t *dest_mac,
                     uint16_t arp_oper,
                     const uint8_t *sender_mac,
@@ -92,15 +107,8 @@ int send_arp_packet(const char *iface_name,
                     const uint8_t *target_mac,
                     const uint32_t *target_ip) {
 
-    int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ARP));
-    if (sockfd < 0) {
-        perror("socket");
-        return -1;
-    }
-
     int ifindex = get_interface_index(sockfd, iface_name);
     if (ifindex < 0) {
-        close(sockfd);
         return -1;
     }
 
@@ -121,39 +129,32 @@ int send_arp_packet(const char *iface_name,
                           (struct sockaddr *)&addr, sizeof(addr));
     if (sent < 0) {
         perror("sendto");
-        close(sockfd);
         return -1;
     }
 
-    printf("ARP packet sent on interface %s\n", iface_name);
-    close(sockfd);
     return 0;
 }
 
-int arp_send_request(const char *iface_name,
+int arp_send_request(int sockfd,
+                     const char *iface_name,
                      const uint8_t *src_mac,
                      const uint32_t *src_ip,
                      const uint32_t *target_ip) {
     uint8_t broadcast_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-    uint8_t zero_mac[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    
-    return send_arp_packet(
-        iface_name,
-        broadcast_mac,     // destination MAC (broadcast)
-        ARPOP_REQUEST,     // ARP operation
-        src_mac,           // source MAC
-        src_ip,            // src_ip
-        zero_mac,          // target MAC is unknown
-        target_ip          // target IP
-    );
+    uint8_t zero_mac[6] = {0, 0, 0, 0, 0, 0};
+
+    return send_arp_packet(sockfd, iface_name, broadcast_mac, ARPOP_REQUEST,
+                           src_mac, src_ip, zero_mac, target_ip);
 }
 
-int arp_send_reply(const char *iface_name,
+int arp_send_reply(int sockfd,
+                   const char *iface_name,
                    const uint8_t *src_mac,
                    const uint32_t *src_ip,
                    const uint8_t *dest_mac,
                    const uint32_t *dest_ip) {
     return send_arp_packet(
+        sockfd,
         iface_name,
         dest_mac,          // destination MAC (target host)
         ARPOP_REPLY,       // ARP operation
@@ -162,4 +163,67 @@ int arp_send_reply(const char *iface_name,
         dest_mac,          // target MAC (the one we're replying to)
         dest_ip            // Target IP (the one we're replying to)
     );
+}
+
+int receive_arp_reply(int sockfd, uint32_t *target_ip, uint8_t *resolved_mac) {
+    uint8_t buffer[ARP_PACKET_SIZE];
+    ssize_t len = recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL);
+    if (len < 0) {
+        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+            return -2;
+        }
+        perror("recvfrom");
+        return -1;
+    }
+
+    if (len < (ssize_t)(sizeof(struct ether_header) + sizeof(struct arp_hdr))) {
+        return 1;
+    }
+
+    struct ether_header *eth = (struct ether_header *)buffer;
+    if (ntohs(eth->ether_type) != ETH_P_ARP) {
+        return 1;
+    }
+
+    struct arp_hdr *arp = (struct arp_hdr *)(buffer + sizeof(struct ether_header));
+    if (ntohs(arp->oper) == ARPOP_REPLY) {
+        memcpy(target_ip, arp->spa, IP_LEN);
+        memcpy(resolved_mac, arp->sha, MAC_LEN);
+        return 0;
+    }
+
+    return 1;
+}
+
+void arp_scan_range(Network network,
+                    int sockfd,
+                    const char *iface_name,
+                    const uint8_t *src_mac,
+                    const uint32_t *src_ip) {
+
+    for (uint32_t ip = network.networkIP + 1; ip < network.broadcastIP; ip++) {
+        uint32_t target_ip = htonl(ip);
+        arp_send_request(sockfd, iface_name, src_mac, src_ip, &target_ip);
+        usleep(5000);
+    }
+
+    printf("Waiting for replies...\n");
+
+    while (1) {
+        uint32_t reply_ip = 0;
+        uint8_t reply_mac[MAC_LEN] = {0};
+
+        int res = receive_arp_reply(sockfd, &reply_ip, reply_mac);
+        if (res == 0) {
+            size_t index = network_find_by_ip(network, ntohl(reply_ip));
+            if (index != -1) {
+                network.devices[index].alive = true;
+                memcpy(network.devices[index].mac, reply_mac, MAC_LEN); 
+            } else {
+                fprintf(stderr, "Device not found\n");
+            }
+        } else if (res == -2 || res == -1) {
+            break;
+        }
+    }
 }
