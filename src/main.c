@@ -4,6 +4,7 @@
 #include "./icmp.h"
 #include "./arp.h"
 #include "./process/scanner.h"
+#include "./process/jammer.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -70,16 +71,12 @@ int main(int argc, char *argv[]){
 
     Network network = create_network(ip, mask);
 
-    uint8_t my_mac[6];
-    get_interface_mac("wlan0", my_mac);
+    pthread_t jam_thread;
+    pthread_create(&jam_thread, NULL, jam_jammed_devices, &network);
 
-
-    int sockfd = arp_create_socket();
-    arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
-
-    printf("Devices alive %lu", network_count_alive(network));
-    scanner_process(network);
+    int sockfd_scanner = arp_create_socket();
+    scanner_process(network, sockfd_scanner, ip);
     
+    close(sockfd_scanner);
     free_network(network);
-    close(sockfd);
 }

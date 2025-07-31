@@ -6,10 +6,12 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <netinet/in.h>
 
 #define COLOR_GREEN "\033[32m"
+#define COLOR_RED   "\033[31m"
 #define COLOR_RESET "\033[0m"
 
 Network create_network(uint32_t ip, uint32_t mask) {
@@ -17,6 +19,8 @@ Network create_network(uint32_t ip, uint32_t mask) {
 
     network.networkIP = ip & mask;
     network.broadcastIP = ip | ~mask;
+
+    pthread_mutex_init(&network.lock, NULL);
     
     network.device_count = network.broadcastIP - network.networkIP - 1;
     if (network.device_count == 0) {
@@ -44,6 +48,7 @@ void free_network(Network network) {
     if (network.devices) {
         free(network.devices);
     }
+    pthread_mutex_destroy(&network.lock);
 }
 
 static void print_mac(const uint8_t *mac) {
@@ -137,21 +142,36 @@ DeviceGroup print_network_nice(Network network) {
     char ip_str[INET_ADDRSTRLEN];
     size_t idx = 0;
 
+    printf(" %3s  %-15s  %-17s  %-6s  %-7s\n", "ID", "IP", "MAC", "Alive", "Jamming");
+    printf("───────────────────────────────────────────────────────────────\n");
+
     for (size_t i = 0; i < network.device_count; i++) {
         if (!network.devices[i].alive) continue;
 
-        group.devices[idx++] = &network.devices[i];
+        group.devices[idx] = &network.devices[i];
 
         if (!ip_uint32_to_str(network.devices[i].ip, ip_str)) {
             strcpy(ip_str, "<invalid>");
         }
 
-        printf("%s[%zu]%s IP: %s", COLOR_GREEN, idx, COLOR_RESET, ip_str);
-        if (network.devices[i].mac) {
-            printf(", MAC: ");
-            print_mac(network.devices[i].mac);
+        printf(" %s%3zu%s  ", COLOR_GREEN, idx + 1, COLOR_RESET);
+
+        if (network.devices[i].jamming) {
+            printf("%s%-15s%s  ", COLOR_RED, ip_str, COLOR_RESET);
+        } else {
+            printf("%-15s  ", ip_str);
         }
-        printf("\n");
+
+        if (network.devices[i].mac) {
+            print_mac(network.devices[i].mac);
+        } else {
+            printf("N/A");
+        }
+
+        printf("  %-6s", network.devices[i].alive ? "Yes" : "No");
+        printf("  %-7s\n", network.devices[i].jamming ? "Yes" : "No");
+
+        idx++;
     }
 
     group.device_count = idx;

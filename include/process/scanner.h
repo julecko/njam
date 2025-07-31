@@ -3,6 +3,6 @@
 
 #include "./network.h"
 
-void scanner_process(Network network);
+void scanner_process(Network network, int sockfd, uint32_t ip);
 
 #endif

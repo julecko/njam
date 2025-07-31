@@ -207,8 +207,6 @@ void arp_scan_range(Network network,
         usleep(5000);
     }
 
-    printf("Waiting for replies...\n");
-
     while (1) {
         uint32_t reply_ip = 0;
         uint8_t reply_mac[MAC_LEN] = {0};

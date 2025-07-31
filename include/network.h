@@ -4,11 +4,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <pthread.h>
 
 typedef struct Device {
     uint32_t ip;
     uint8_t mac[6];
     bool alive;
+    bool jamming;
 } Device;
 
 typedef struct Network {
@@ -16,6 +18,8 @@ typedef struct Network {
     uint32_t broadcastIP;
     size_t device_count;
     Device* devices;
+
+    pthread_mutex_t lock;
 } Network;
 
 typedef struct DeviceGroup {

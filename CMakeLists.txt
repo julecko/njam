@@ -34,7 +34,7 @@ add_executable(njam
     src/network.c
     src/icmp.c
     src/arp.c
-    src/process/spoofer.c
+    src/process/jammer.c
     src/process/scanner.c
 )
 

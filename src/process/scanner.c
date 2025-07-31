@@ -5,8 +5,10 @@
 #include <sys/epoll.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 
 #include "./network.h"
+#include "./arp.h"
 
 #define MAX_LINE 1024
 #define ALTERNATE_SCREEN_CODE "\033[?1049h"
@@ -48,7 +50,7 @@ void print_table(Network network) {
 
     group = print_network_nice(network);
 
-    printf("Press 'q' to quit(%d)...\n", counter++);
+    printf("NJam console > ", counter++);
     fflush(stdout);
 }
 
@@ -56,6 +58,43 @@ static void reset_input(char *input, size_t *input_len) {
     *input_len = 0;
     input[0] = '\0';
 }
+
+static void print_help() {
+    printf("\nCommands:\n");
+    printf("  help          Show this help message\n");
+    printf("  scan          Trigger network scan\n");
+    printf("  <number>      Show device info by index\n");
+    printf("  q             Quit\n\n");
+}
+
+static int is_number(const char *str) {
+    for (; *str; str++) {
+        if (!isdigit((unsigned char)*str)) return 0;
+    }
+    return 1;
+}
+
+void stall_program() {
+    struct termios oldt, newt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+
+    newt.c_lflag |= ICANON;
+    newt.c_lflag |= ECHO;
+    newt.c_cc[VMIN] = 1;
+    newt.c_cc[VTIME] = 0;
+
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &newt);
+
+    printf("Press any key to continue...\n");
+    fflush(stdout);
+
+    char dummy;
+    read(STDIN_FILENO, &dummy, 1);
+
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &oldt);
+}
+
 
 static void handle_backspace(char *input, size_t *input_len) {
     if (*input_len > 0) {
@@ -73,14 +112,41 @@ static void handle_char(char c, char *input, size_t *input_len) {
     }
 }
 
-static void handle_enter(char *input, size_t *input_len) {
+static int handle_enter(Network network, char *input, size_t *input_len) {
+    int return_code = 0;
     input[*input_len] = '\0';
-    if (strcmp(input, "q") == 0) {
+
+    if (*input_len == 0 || strcmp(input, "help") == 0) {
+        print_help();
+        stall_program();
+    }
+    else if (strcmp(input, "q") == 0) {
         exit(0);
     }
-    printf("\nYou typed: %s\n", input);
+    else if (strcmp(input, "scan") == 0) {
+        printf("\nScaning...\n");
+        return_code = 1;
+    }
+    else if (is_number(input)) {
+        int idx = atoi(input);
+        if (idx < 1 || idx > (int)group.device_count) {
+            printf("\nInvalid device index: %d\n", idx);
+            stall_program();
+        } else {
+            pthread_mutex_lock(&network.lock);
+            group.devices[idx-1]->jamming = !group.devices[idx-1]->jamming; 
+            pthread_mutex_unlock(&network.lock);
+        }
+    }
+    else {
+        printf("\nUnknown command: %s\n", input);
+        print_help();
+        stall_program();
+    }
+
     fflush(stdout);
     reset_input(input, input_len);
+    return return_code;
 }
 
 static void redraw_screen(Network network, const char *input) {
@@ -89,15 +155,21 @@ static void redraw_screen(Network network, const char *input) {
     fflush(stdout);
 }
 
-void scanner_process(Network network) {
+void scanner_process(Network network, int sockfd, uint32_t ip) {
+    uint8_t my_mac[6];
+    char input[MAX_LINE] = {0};
+    size_t input_len = 0;
+
+    get_interface_mac("wlan0", my_mac);
+
+    redraw_screen(network, input);
+    arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
+    
     enable_raw_mode();
 
     int epfd = epoll_create1(0);
     struct epoll_event ev = { .events = EPOLLIN, .data.fd = STDIN_FILENO };
     epoll_ctl(epfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev);
-
-    char input[MAX_LINE] = {0};
-    size_t input_len = 0;
 
     print_table(network);
 
@@ -109,9 +181,18 @@ void scanner_process(Network network) {
             char c;
             ssize_t bytes_read = read(STDIN_FILENO, &c, 1);
             if (bytes_read > 0) {
-                if (c == '\n') handle_enter(input, &input_len);
-                else if (c == 127 || c == '\b') handle_backspace(input, &input_len);
-                else handle_char(c, input, &input_len);
+                if (c == '\n') {
+                    switch(handle_enter(network, input, &input_len)){
+                        case 1:
+                            arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
+                            break;
+                    }
+                    redraw_screen(network, input);
+                } else if (c == 127 || c == '\b') {
+                    handle_backspace(input, &input_len);
+                } else {
+                    handle_char(c, input, &input_len);
+                }
             }
         } else {
             redraw_screen(network, input);
