@@ -43,30 +43,3 @@ target_include_directories(njam PRIVATE
 )
 
 target_compile_definitions(njam PUBLIC VERSION=\"${NJAM_VERSION}\")
-
-
-# Prepare dpkg packaging
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CPACK_PACKAGE_NAME "njam")
-    set(CPACK_PACKAGE_VERSION "${NJAM_VERSION}")
-    set(CPACK_GENERATOR "DEB")
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Julecko <julecko@dilino.sk>")
-    set(CPACK_DEBIAN_PACKAGE_SECTION "net")
-    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-    set(CPACK_DEBIAN_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
-    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Network jammer utilizing arp spoofing")
-
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS
-        "libc6 (>= 2.28)"
-    )
-
-    set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
-        "${CMAKE_SOURCE_DIR}/packaging/postinst"
-    )
-
-
-    include(CPack)
-
-    install(TARGETS njam DESTINATION bin)
-
-endif()
