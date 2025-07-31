@@ -134,7 +134,12 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
             stall_program();
         } else {
             pthread_mutex_lock(&network.lock);
-            group.devices[idx-1]->jamming = !group.devices[idx-1]->jamming; 
+            DeviceStatus status = group.devices[idx-1]->status;
+            if (status == DEAD)  {
+                group.devices[idx-1]->status = JAMMING;
+            } else if (status == JAMMING) {
+                group.devices[idx-1]->status = DISCONNECTING;
+            }
             pthread_mutex_unlock(&network.lock);
         }
     }

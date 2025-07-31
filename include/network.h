@@ -6,11 +6,18 @@
 #include <stddef.h>
 #include <pthread.h>
 
+typedef enum DeviceStatus {
+    DEAD,
+    JAMMING,
+    DISCONNECTING,
+} DeviceStatus;
+
 typedef struct Device {
     uint32_t ip;
     uint8_t mac[6];
     bool alive;
-    bool jamming;
+    DeviceStatus status;
+    int disconnecting_counter;
 } Device;
 
 typedef struct Network {

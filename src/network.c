@@ -156,8 +156,10 @@ DeviceGroup print_network_nice(Network network) {
 
         printf(" %s%3zu%s  ", COLOR_GREEN, idx + 1, COLOR_RESET);
 
-        if (network.devices[i].jamming) {
+        if (network.devices[i].status == JAMMING) {
             printf("%s%-15s%s  ", COLOR_RED, ip_str, COLOR_RESET);
+        } else if (network.devices[i].status == DISCONNECTING) {
+            printf("%s%-15s%s  ", COLOR_GREEN, ip_str, COLOR_RESET);
         } else {
             printf("%-15s  ", ip_str);
         }
@@ -169,7 +171,7 @@ DeviceGroup print_network_nice(Network network) {
         }
 
         printf("  %-6s", network.devices[i].alive ? "Yes" : "No");
-        printf("  %-7s\n", network.devices[i].jamming ? "Yes" : "No");
+        printf("  %-7s\n", network.devices[i].status == JAMMING ? "Yes" : "No");
 
         idx++;
     }
