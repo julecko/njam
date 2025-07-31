@@ -38,7 +38,7 @@ void *jam_jammed_devices(void *arg) {
                 arp_send_reply(sockfd, "wlan0", device->mac, &device_ip, router->mac, &router_ip);
                 arp_send_reply(sockfd, "wlan0", router->mac, &router_ip, device->mac, &device_ip);
 
-                if (device->disconnecting_counter++ > 2) {
+                if (device->disconnecting_counter++ > 4) {
                     device->status = DEAD;
                     device->disconnecting_counter = 0;
                 }

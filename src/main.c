@@ -71,11 +71,19 @@ bool get_ip_and_mask(const char *arg, uint32_t *ip, uint32_t *mask) {
     return ip_str_to_uint32(ip_str, ip) && parse_mask_length(mask_str, mask);
 }
 
+void ensure_root() {
+    if (geteuid() != 0) {
+        fprintf(stderr, "[!] This program must be run as root (use sudo).\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
 int main(int argc, char *argv[]){
     if (argc < 2) {
         printf("Usage: njam <IP-Address>/<Subnet>\n");
         return EXIT_FAILURE;
     }
+    ensure_root();
 
     signal(SIGINT, handle_sigint);
 
