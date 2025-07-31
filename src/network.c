@@ -145,8 +145,8 @@ DeviceGroup print_network_nice(Network network) {
     printf(" %3s  %-15s  %-17s  %-6s  %-7s\n", "ID", "IP", "MAC", "Alive", "Jamming");
     printf("───────────────────────────────────────────────────────────────\n");
 
-    for (size_t i = 0; i < network.device_count; i++) {
-        if (!network.devices[i].alive) continue;
+    for (size_t i = 1; i < network.device_count; i++) {
+        if (!network.devices[i].alive && network.devices[i].status == DEAD) continue;
 
         group.devices[idx] = &network.devices[i];
 

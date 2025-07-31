@@ -7,14 +7,11 @@
 #include <time.h>
 #include <ctype.h>
 
+#include "./process/scanner.h"
 #include "./network.h"
 #include "./arp.h"
 
 #define MAX_LINE 1024
-#define ALTERNATE_SCREEN_CODE "\033[?1049h"
-#define EXIT_ALTERNATE_SCREEN_CODE "\033[?1049l"
-#define TOP_LEFT_CODE "\033[H"
-#define CLEAR_SCREEN_CODE "\033[2J"
 
 struct termios orig_termios;
 static DeviceGroup group = {0};
@@ -22,6 +19,7 @@ static DeviceGroup group = {0};
 void disable_raw_mode() {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
     printf(EXIT_ALTERNATE_SCREEN_CODE);
+    printf("\033[H\033[J");
     fflush(stdout);
 }
 
@@ -63,7 +61,10 @@ static void print_help() {
     printf("\nCommands:\n");
     printf("  help          Show this help message\n");
     printf("  scan          Trigger network scan\n");
-    printf("  <number>      Show device info by index\n");
+    printf("  <number>      Trigger device jamming by index\n");
+    printf("  all           Trigger jamming of all devices alive\n");
+    printf("  die           Set all devices to disconnecting\n");
+    printf("  armagedon     Trigger jamming everything\n");
     printf("  q             Quit\n\n");
 }
 
@@ -119,15 +120,34 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
     if (*input_len == 0 || strcmp(input, "help") == 0) {
         print_help();
         stall_program();
-    }
-    else if (strcmp(input, "q") == 0) {
-        exit(0);
-    }
-    else if (strcmp(input, "scan") == 0) {
+    } else if (strcmp(input, "q") == 0) {
+        return 2;
+    } else if (strcmp(input, "scan") == 0) {
         printf("\nScaning...\n");
         return_code = 1;
-    }
-    else if (is_number(input)) {
+    } else if (strcmp(input, "all") == 0) {
+        pthread_mutex_lock(&network.lock);
+        for (size_t i=0;i<group.device_count;i++){
+            if (group.devices[i]->alive) {
+                group.devices[i]->status = JAMMING;
+            }
+        }
+        pthread_mutex_unlock(&network.lock);
+    } else if (strcmp(input, "die") == 0) {
+        pthread_mutex_lock(&network.lock);
+        for (size_t i=1;i<network.device_count;i++){
+            if (network.devices[i].status == JAMMING) {
+                network.devices[i].status = DISCONNECTING;
+            }
+        }
+        pthread_mutex_unlock(&network.lock);
+    } else if (strcmp(input, "armagedon") == 0) {
+        pthread_mutex_lock(&network.lock);
+        for (size_t i=1;i<network.device_count;i++){
+            network.devices[i].status = JAMMING;
+        }
+        pthread_mutex_unlock(&network.lock);
+    }  else if (is_number(input)) {
         int idx = atoi(input);
         if (idx < 1 || idx > (int)group.device_count) {
             printf("\nInvalid device index: %d\n", idx);
@@ -135,7 +155,7 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
         } else {
             pthread_mutex_lock(&network.lock);
             DeviceStatus status = group.devices[idx-1]->status;
-            if (status == DEAD)  {
+            if (status == DEAD || status == DISCONNECTING)  {
                 group.devices[idx-1]->status = JAMMING;
             } else if (status == JAMMING) {
                 group.devices[idx-1]->status = DISCONNECTING;
@@ -166,9 +186,6 @@ void scanner_process(Network network, int sockfd, uint32_t ip) {
     size_t input_len = 0;
 
     get_interface_mac("wlan0", my_mac);
-
-    redraw_screen(network, input);
-    arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
     
     enable_raw_mode();
 
@@ -176,11 +193,12 @@ void scanner_process(Network network, int sockfd, uint32_t ip) {
     struct epoll_event ev = { .events = EPOLLIN, .data.fd = STDIN_FILENO };
     epoll_ctl(epfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev);
 
-    print_table(network);
+    printf("Scanning...\n");
+    arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
 
     while (1) {
         struct epoll_event events[1];
-        int nfds = epoll_wait(epfd, events, 1, 2000);
+        int nfds = epoll_wait(epfd, events, 1, 500);
 
         if (nfds > 0) {
             char c;
@@ -191,6 +209,8 @@ void scanner_process(Network network, int sockfd, uint32_t ip) {
                         case 1:
                             arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
                             break;
+                        case 2:
+                            return;
                     }
                     redraw_screen(network, input);
                 } else if (c == 127 || c == '\b') {

