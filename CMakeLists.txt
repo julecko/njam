@@ -34,6 +34,8 @@ add_executable(njam
     src/network.c
     src/icmp.c
     src/arp.c
+    src/process/spoofer.c
+    src/process/scanner.c
 )
 
 target_include_directories(njam PRIVATE

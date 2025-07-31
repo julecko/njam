@@ -18,11 +18,16 @@ typedef struct Network {
     Device* devices;
 } Network;
 
+typedef struct DeviceGroup {
+    size_t device_count;
+    Device** devices;
+} DeviceGroup;
+
 Network create_network(uint32_t ip, uint32_t mask);
 void free_network(Network network);
 void print_network(Network network);
 size_t network_find_by_ip(Network network, uint32_t ip);
 size_t network_count_alive(Network network);
-int print_network_nice(Network network);
+DeviceGroup print_network_nice(Network network);
 
 #endif

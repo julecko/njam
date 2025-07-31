@@ -65,8 +65,6 @@ void icmp_scan_network(uint32_t network_ip, uint32_t broadcast_ip) {
         usleep(1000);
     }
 
-    printf("Waiting for replies...\n");
-
     char recvbuf[BUFFER_SIZE];
     time_t start_time = time(NULL);
     while (time(NULL) - start_time <= TIMEOUT) {

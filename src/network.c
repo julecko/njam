@@ -119,64 +119,41 @@ static void clear_lines(int n) {
     }
 }
 
-int print_network_nice(Network network) {
+DeviceGroup print_network_nice(Network network) {
     size_t alive_count = network_count_alive(network);
+    DeviceGroup group = {0};
+
     if (alive_count == 0) {
         printf("No alive devices found.\n");
-        return 0;
+        return group;
+    }
+
+    group.devices = calloc(alive_count, sizeof(Device*));
+    if (!group.devices) {
+        perror("calloc");
+        return group;
     }
 
     char ip_str[INET_ADDRSTRLEN];
-    int printed_lines = 0;
+    size_t idx = 0;
 
-    for (size_t i = 0, id = 1; i < network.device_count; i++) {
+    for (size_t i = 0; i < network.device_count; i++) {
         if (!network.devices[i].alive) continue;
+
+        group.devices[idx++] = &network.devices[i];
+
         if (!ip_uint32_to_str(network.devices[i].ip, ip_str)) {
             strcpy(ip_str, "<invalid>");
         }
-        printf("%s[%zu]%s IP: %s", COLOR_GREEN, id, COLOR_RESET, ip_str);
+
+        printf("%s[%zu]%s IP: %s", COLOR_GREEN, idx, COLOR_RESET, ip_str);
         if (network.devices[i].mac) {
             printf(", MAC: ");
             print_mac(network.devices[i].mac);
         }
         printf("\n");
-        printed_lines++;
-        id++;
     }
 
-    printed_lines++;
-
-    printf("Select device by number or press Enter to refresh: ");
-    fflush(stdout);
-
-    char input[32];
-    if (!fgets(input, sizeof(input), stdin)) {
-        return 0;
-    }
-
-    size_t len = strlen(input);
-    if (len > 0 && input[len - 1] == '\n') {
-        input[len - 1] = 0;
-        len--;
-    }
-
-    if (len == 0) {
-        clear_lines(printed_lines);
-        return print_network_nice(network);
-    }
-
-    for (size_t i = 0; i < len; i++) {
-        if (!isdigit((unsigned char)input[i])) {
-            clear_lines(printed_lines);
-            return print_network_nice(network);
-        }
-    }
-
-    int choice = atoi(input);
-    if (choice < 1 || (size_t)choice > alive_count) {
-        clear_lines(printed_lines);
-        return print_network_nice(network);
-    }
-
-    return choice;
+    group.device_count = idx;
+    return group;
 }
