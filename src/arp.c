@@ -21,6 +21,8 @@
 #define MAC_LEN 6
 #define IP_LEN 4
 
+#define SCAN_TIMEOUT 5.0
+
 struct arp_hdr {
     uint16_t htype;         // Hardware type (Ethernet 0x0001)
     uint16_t ptype;         // Protocol type (IPv4 0x0800)
@@ -207,7 +209,17 @@ void arp_scan_range(Network network,
         usleep(5000);
     }
 
+    struct timespec start, now;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
     while (1) {
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        double elapsed = (now.tv_sec - start.tv_sec) +
+                         (now.tv_nsec - start.tv_nsec) / 1e9;
+        if (elapsed >= SCAN_TIMEOUT) {
+            break;
+        }
+
         uint32_t reply_ip = 0;
         uint8_t reply_mac[MAC_LEN] = {0};
 
@@ -226,4 +238,5 @@ void arp_scan_range(Network network,
             break;
         }
     }
+    printf("Scanning finished\n");
 }
