@@ -29,6 +29,7 @@ endif()
 # Executable 1: njam
 add_executable(njam
     src/main.c
+    src/argparse.c
     src/ip_utils.c
     src/mask_utils.c
     src/network.c
