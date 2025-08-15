@@ -120,7 +120,7 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
     if (*input_len == 0 || strcmp(input, "help") == 0) {
         print_help();
         stall_program();
-    } else if (strcmp(input, "q") == 0) {
+    } else if (strcmp(input, "q") == 0 || strcmp(input, "exit") == 0) {
         return 2;
     } else if (strcmp(input, "scan") == 0) {
         printf("\nScaning...\n");
@@ -147,18 +147,33 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
             network.devices[i].status = JAMMING;
         }
         pthread_mutex_unlock(&network.lock);
-    }  else if (is_number(input)) {
-        int idx = atoi(input);
+    }  else if (strncmp(input, "jam ", 4) == 0 && is_number(input + 4)) {
+        int idx = atoi(input + 4);
         if (idx < 1 || idx > (int)group.device_count) {
             printf("\nInvalid device index: %d\n", idx);
             stall_program();
         } else {
             pthread_mutex_lock(&network.lock);
-            DeviceStatus status = group.devices[idx-1]->status;
-            if (status == INACTIVE || status == DISCONNECTING)  {
-                group.devices[idx-1]->status = JAMMING;
+            DeviceStatus status = group.devices[idx - 1]->status;
+            if (status == INACTIVE || status == DISCONNECTING) {
+                group.devices[idx - 1]->status = JAMMING;
             } else if (status == JAMMING) {
-                group.devices[idx-1]->status = DISCONNECTING;
+                group.devices[idx - 1]->status = DISCONNECTING;
+            }
+            pthread_mutex_unlock(&network.lock);
+        }
+    } else if (strncmp(input, "router ", 7) == 0 && is_number(input + 7)) {
+        int idx = atoi(input + 7);
+        if (idx < 1 || idx > (int)group.device_count) {
+            printf("\nInvalid device index: %d\n", idx);
+            stall_program();
+        } else {
+            pthread_mutex_lock(&network.lock);
+            DeviceType type = group.devices[idx - 1]->type;
+            if (type == CLIENT) {
+                group.devices[idx - 1]->type = ROUTER;
+            } else {
+                group.devices[idx - 1]->type = CLIENT;
             }
             pthread_mutex_unlock(&network.lock);
         }

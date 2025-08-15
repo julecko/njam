@@ -203,7 +203,7 @@ void arp_scan_range(Network network,
                     const uint8_t *src_mac,
                     const uint32_t *src_ip) {
 
-    for (uint32_t ip = network.networkIP + 1; ip < network.broadcastIP; ip++) {
+    for (uint32_t ip = network.networkIP; ip < network.broadcastIP; ip++) {
         uint32_t target_ip = htonl(ip);
         arp_send_request(sockfd, iface_name, src_mac, src_ip, &target_ip);
         usleep(5000);

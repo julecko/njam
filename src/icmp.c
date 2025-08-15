@@ -60,7 +60,7 @@ void icmp_scan_network(uint32_t network_ip, uint32_t broadcast_ip) {
 
     uint32_t ident = getpid() & 0xFFFF;
 
-    for (uint32_t ip = network_ip + 1; ip < broadcast_ip; ip++) {
+    for (uint32_t ip = network_ip; ip < broadcast_ip; ip++) {
         send_ping(sockfd, ip, ident);
         usleep(1000);
     }

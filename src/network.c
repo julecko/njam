@@ -10,6 +10,7 @@
 
 #include <netinet/in.h>
 
+#define COLOR_BLUE  "\033[33m"
 #define COLOR_GREEN "\033[32m"
 #define COLOR_RED   "\033[31m"
 #define COLOR_RESET "\033[0m"
@@ -37,7 +38,7 @@ Network create_network(uint32_t ip, uint32_t mask) {
 
 
     for (size_t i = 0; i < network.device_count; i++) {
-        network.devices[i].ip = network.networkIP + i + 1;
+        network.devices[i].ip = network.networkIP + i;
         network.devices[i].alive = false;
     }
 
@@ -159,7 +160,7 @@ DeviceGroup print_network_nice(Network network) {
     printf(" %3s  %-15s  %-17s  %-6s  %-7s\n", "ID", "IP", "MAC", "Alive", "Jamming");
     printf("───────────────────────────────────────────────────────────────\n");
 
-    for (size_t i = 1; i < network.device_count; i++) {
+    for (size_t i = 0; i < network.device_count; i++) {
         if (!network.devices[i].alive && network.devices[i].status == INACTIVE) continue;
 
         group.devices[idx] = &network.devices[i];
@@ -170,7 +171,9 @@ DeviceGroup print_network_nice(Network network) {
 
         printf(" %s%3zu%s  ", COLOR_GREEN, idx + 1, COLOR_RESET);
 
-        if (network.devices[i].status == JAMMING) {
+        if (network.devices[i].type == ROUTER) {
+            printf("%s%-15s%s  ", COLOR_BLUE, ip_str, COLOR_RESET);
+        } else if (network.devices[i].status == JAMMING) {
             printf("%s%-15s%s  ", COLOR_RED, ip_str, COLOR_RESET);
         } else if (network.devices[i].status == DISCONNECTING) {
             printf("%s%-15s%s  ", COLOR_GREEN, ip_str, COLOR_RESET);

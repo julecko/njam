@@ -6,6 +6,12 @@
 #include <stddef.h>
 #include <pthread.h>
 
+
+typedef enum DeviceType {
+    CLIENT,
+    ROUTER,
+} DeviceType;
+
 typedef enum DeviceStatus {
     INACTIVE,
     JAMMING,
@@ -16,6 +22,7 @@ typedef struct Device {
     uint32_t ip;
     uint8_t mac[6];
     bool alive;
+    DeviceType type;
     DeviceStatus status;
     int disconnecting_counter;
 } Device;
