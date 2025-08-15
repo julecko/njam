@@ -42,9 +42,10 @@ void handle_sigint(int signum) {
                 device->status = DISCONNECTING;
             }
         }
+        
+        stop_flag = true;
         pthread_mutex_unlock(&global_network->lock);
 
-        stop_flag = true;
         pthread_join(jam_thread, NULL);
 
         close(sockfd_scanner);
