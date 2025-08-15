@@ -67,6 +67,7 @@ int main(int argc, char *argv[]){
 
     Args args = {0};
     if (!parse_args(&args, argc, (const char **)argv)) {
+        args_print(&args);
         print_usage();
         return EXIT_FAILURE;
     }
