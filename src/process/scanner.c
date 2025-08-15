@@ -37,7 +37,6 @@ void enable_raw_mode() {
 }
 
 void print_table(Network network) {
-    static int counter = 0;
     if (group.devices != NULL) {
         free(group.devices);
     }
@@ -47,7 +46,7 @@ void print_table(Network network) {
 
     group = print_network_nice(network);
 
-    printf("NJam console > ", counter++);
+    printf("NJam console > ");
     fflush(stdout);
 }
 
@@ -108,6 +107,8 @@ static void handle_backspace(char *input, size_t *input_len) {
 static void handle_char(char c, char *input, size_t *input_len) {
     if ((c >= 32 && c <= 126) && *input_len < MAX_LINE - 1) {
         input[(*input_len)++] = c;
+        input[(*input_len)] = '\0';
+        
         write(STDOUT_FILENO, &c, 1);
     }
 }
@@ -226,6 +227,9 @@ void scanner_process(Network network, int sockfd, uint32_t ip) {
                         case 2:
                             return;
                     }
+                    input[0] = '\0';
+                    input_len = 0;
+
                     redraw_screen(network, input);
                 } else if (c == 127 || c == '\b') {
                     handle_backspace(input, &input_len);
