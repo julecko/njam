@@ -39,15 +39,19 @@ void *jam_jammed_devices(void *arg) {
                 arp_send_reply(sockfd, "wlan0", router->mac, &router_ip, device->mac, &device_ip);
 
                 if (device->disconnecting_counter++ > 4) {
-                    device->status = DEAD;
+                    device->status = INACTIVE;
                     device->disconnecting_counter = 0;
                 }
             }
         }
-        pthread_mutex_unlock(&network->lock);
         if (*stop_flag) {
+            if (network_count_inactive(*network) == network->device_count) {
+                break;
+            }
             cleanup--;
         }
+        pthread_mutex_unlock(&network->lock);
+
         sleep(2);
     }
     close(sockfd);

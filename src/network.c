@@ -101,6 +101,20 @@ size_t network_find_by_ip(Network network, uint32_t ip) {
     return -1;
 }
 
+size_t network_count_inactive(const Network network) {
+    if (!network.devices) {
+        return -1;
+    }
+
+    size_t counter = 0;
+    for (size_t i = 0; i < network.device_count; i++) {
+        if (network.devices[i].status == INACTIVE) {
+            counter++;
+        }
+    }
+    return counter;
+}
+
 void network_set_dead(Network network) {
     for (size_t i = 0;i<network.device_count;i++) {
         network.devices[i].alive = false;
@@ -146,7 +160,7 @@ DeviceGroup print_network_nice(Network network) {
     printf("───────────────────────────────────────────────────────────────\n");
 
     for (size_t i = 1; i < network.device_count; i++) {
-        if (!network.devices[i].alive && network.devices[i].status == DEAD) continue;
+        if (!network.devices[i].alive && network.devices[i].status == INACTIVE) continue;
 
         group.devices[idx] = &network.devices[i];
 

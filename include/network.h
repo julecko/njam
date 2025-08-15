@@ -7,7 +7,7 @@
 #include <pthread.h>
 
 typedef enum DeviceStatus {
-    DEAD,
+    INACTIVE,
     JAMMING,
     DISCONNECTING,
 } DeviceStatus;
@@ -37,6 +37,7 @@ typedef struct DeviceGroup {
 Network create_network(uint32_t ip, uint32_t mask);
 void free_network(Network network);
 void print_network(Network network);
+size_t network_count_inactive(const Network network);
 size_t network_find_by_ip(Network network, uint32_t ip);
 size_t network_count_alive(Network network);
 DeviceGroup print_network_nice(Network network);

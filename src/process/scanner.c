@@ -155,7 +155,7 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
         } else {
             pthread_mutex_lock(&network.lock);
             DeviceStatus status = group.devices[idx-1]->status;
-            if (status == DEAD || status == DISCONNECTING)  {
+            if (status == INACTIVE || status == DISCONNECTING)  {
                 group.devices[idx-1]->status = JAMMING;
             } else if (status == JAMMING) {
                 group.devices[idx-1]->status = DISCONNECTING;
