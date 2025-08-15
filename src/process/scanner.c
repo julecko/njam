@@ -19,7 +19,6 @@ static DeviceGroup group = {0};
 void disable_raw_mode() {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
     printf(EXIT_ALTERNATE_SCREEN_CODE);
-    printf(TOP_LEFT_CODE CLEAR_SCREEN_FROM_CURSOR);
     fflush(stdout);
 }
 
