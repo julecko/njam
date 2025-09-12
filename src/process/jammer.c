@@ -29,7 +29,7 @@ void *jam_jammed_devices(void *arg) {
             uint32_t router_ip = htonl(device_router->ip);
             
             for (size_t y = 0; y < network->device_count; y++) {
-                Device *device_client = &network->devices[i];
+                Device *device_client = &network->devices[y];
                 if (device_client->type != CLIENT) {
                     continue;
                 }

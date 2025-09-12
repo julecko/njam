@@ -139,7 +139,7 @@ static void clear_lines(int n) {
     }
 }
 
-DeviceGroup print_network_nice(Network network) {
+DeviceGroup print_network_nice(Network network, size_t offset, size_t max_visible) {
     size_t alive_count = network_count_alive(network);
     DeviceGroup group = {0};
 
@@ -147,6 +147,10 @@ DeviceGroup print_network_nice(Network network) {
         printf("No alive devices found.\n");
         return group;
     }
+
+    if (offset > alive_count) offset = alive_count;
+    if (offset + max_visible > alive_count)
+        max_visible = alive_count - offset;
 
     group.devices = calloc(alive_count, sizeof(Device*));
     if (!group.devices) {
@@ -162,37 +166,38 @@ DeviceGroup print_network_nice(Network network) {
 
     for (size_t i = 0; i < network.device_count; i++) {
         if (!network.devices[i].alive && network.devices[i].status == INACTIVE) continue;
+        group.devices[idx++] = &network.devices[i];
+    }
+    group.device_count = idx;
 
-        group.devices[idx] = &network.devices[i];
+    for (size_t i = offset; i < offset + max_visible && i < group.device_count; i++) {
+        Device *dev = group.devices[i];
 
-        if (!ip_uint32_to_str(network.devices[i].ip, ip_str)) {
+        if (!ip_uint32_to_str(dev->ip, ip_str)) {
             strcpy(ip_str, "<invalid>");
         }
 
-        printf(" %s%3zu%s  ", COLOR_GREEN, idx + 1, COLOR_RESET);
+        printf(" %s%3zu%s  ", COLOR_GREEN, i + 1, COLOR_RESET);
 
-        if (network.devices[i].type == ROUTER) {
+        if (dev->type == ROUTER) {
             printf("%s%-15s%s  ", COLOR_BLUE, ip_str, COLOR_RESET);
-        } else if (network.devices[i].status == JAMMING) {
+        } else if (dev->status == JAMMING) {
             printf("%s%-15s%s  ", COLOR_RED, ip_str, COLOR_RESET);
-        } else if (network.devices[i].status == DISCONNECTING) {
+        } else if (dev->status == DISCONNECTING) {
             printf("%s%-15s%s  ", COLOR_GREEN, ip_str, COLOR_RESET);
         } else {
             printf("%-15s  ", ip_str);
         }
 
-        if (network.devices[i].mac) {
-            print_mac(network.devices[i].mac);
+        if (dev->mac) {
+            print_mac(dev->mac);
         } else {
             printf("N/A");
         }
 
-        printf("  %-6s", network.devices[i].alive ? "Yes" : "No");
-        printf("  %-7s\n", network.devices[i].status == JAMMING ? "Yes" : "No");
-
-        idx++;
+        printf("  %-6s", dev->alive ? "Yes" : "No");
+        printf("  %-7s\n", dev->status == JAMMING ? "Yes" : "No");
     }
 
-    group.device_count = idx;
     return group;
 }

@@ -16,6 +16,14 @@
 struct termios orig_termios;
 static DeviceGroup group = {0};
 
+size_t get_visible_rows() {
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0) {
+        return ws.ws_row > 3 ? ws.ws_row - 3 : ws.ws_row;
+    }
+    return 10;
+}
+
 void disable_raw_mode() {
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
     printf(EXIT_ALTERNATE_SCREEN_CODE);
@@ -36,7 +44,7 @@ void enable_raw_mode() {
     fflush(stdout);
 }
 
-void print_table(Network network) {
+void print_table(Network network, size_t offset, size_t max_visible) {
     if (group.devices != NULL) {
         free(group.devices);
     }
@@ -44,7 +52,7 @@ void print_table(Network network) {
     printf(TOP_LEFT_CODE);
     printf(CLEAR_SCREEN_CODE_FULL);
 
-    group = print_network_nice(network);
+    group = print_network_nice(network, offset, max_visible);
 
     printf("NJam console > ");
     fflush(stdout);
@@ -139,7 +147,7 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
         pthread_mutex_unlock(&network.lock);
     } else if (strcmp(input, "die") == 0) {
         pthread_mutex_lock(&network.lock);
-        for (size_t i=1;i<network.device_count;i++){
+        for (size_t i=0;i<network.device_count;i++){
             if (group.devices[i]->type != CLIENT) {
                 continue;
             }
@@ -150,7 +158,7 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
         pthread_mutex_unlock(&network.lock);
     } else if (strcmp(input, "armagedon") == 0) {
         pthread_mutex_lock(&network.lock);
-        for (size_t i=1;i<network.device_count;i++){
+        for (size_t i=0;i<network.device_count;i++){
             if (network.devices[i].type != CLIENT) {
                 continue;
             }
@@ -187,8 +195,7 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
             }
             pthread_mutex_unlock(&network.lock);
         }
-    }
-    else {
+    } else {
         printf("\nUnknown command: %s\n", input);
         print_help();
         stall_program();
@@ -199,8 +206,11 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
     return return_code;
 }
 
-static void redraw_screen(Network network, const char *input) {
-    print_table(network);
+static void redraw_screen(Network network,
+                          const char *input,
+                          size_t offset,
+                          size_t max_visible) {
+    print_table(network, offset, max_visible);
     printf("%s", input);
     fflush(stdout);
 }
@@ -221,9 +231,14 @@ void scanner_process(Network network, int sockfd, uint32_t ip) {
     printf("Scanning...\n");
     arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
 
+    size_t offset = 0;
+    size_t max_visible = get_visible_rows();
+
     while (1) {
         struct epoll_event events[1];
         int nfds = epoll_wait(epfd, events, 1, 500);
+
+        max_visible = get_visible_rows();
 
         if (nfds > 0) {
             char c;
@@ -240,15 +255,26 @@ void scanner_process(Network network, int sockfd, uint32_t ip) {
                     input[0] = '\0';
                     input_len = 0;
 
-                    redraw_screen(network, input);
+                    redraw_screen(network, input, offset, max_visible);
                 } else if (c == 127 || c == '\b') {
                     handle_backspace(input, &input_len);
-                } else {
+                } else if (c == '\x1b') {
+                    char seq[2];
+                    if (read(STDIN_FILENO, &seq[0], 1) == 1 &&
+                        read(STDIN_FILENO, &seq[1], 1) == 1) {
+                        if (seq[0] == '[' && seq[1] == 'B') { // Up
+                            if (offset + max_visible < group.device_count) offset++;
+                        } else if (seq[0] == '[' && seq[1] == 'A') { // Down
+                            if (offset > 0) offset--;
+                        }
+                        redraw_screen(network, input, offset, max_visible);
+                    }
+                }else {
                     handle_char(c, input, &input_len);
                 }
             }
         } else {
-            redraw_screen(network, input);
+            redraw_screen(network, input, offset, max_visible);
         }
     }
 }
