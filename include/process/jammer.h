@@ -7,6 +7,7 @@
 
 typedef struct JammerArgs{
     Network *network;
+    const char *interface;
     volatile bool *stop_flag;
 } JammerArgs;
 

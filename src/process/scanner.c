@@ -215,12 +215,12 @@ static void redraw_screen(Network network,
     fflush(stdout);
 }
 
-void scanner_process(Network network, int sockfd, uint32_t ip) {
+void scanner_process(Network network, int sockfd, uint32_t ip, const char *interface) {
     uint8_t my_mac[6];
     char input[MAX_LINE] = {0};
     size_t input_len = 0;
 
-    get_interface_mac("wlan0", my_mac);
+    get_interface_mac(interface, my_mac);
     
     enable_raw_mode();
 
@@ -229,7 +229,7 @@ void scanner_process(Network network, int sockfd, uint32_t ip) {
     epoll_ctl(epfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev);
 
     printf("Scanning...\n");
-    arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
+    arp_scan_range(network, sockfd, interface, my_mac, &ip);
 
     size_t offset = 0;
     size_t max_visible = get_visible_rows();
@@ -247,7 +247,7 @@ void scanner_process(Network network, int sockfd, uint32_t ip) {
                 if (c == '\n') {
                     switch(handle_enter(network, input, &input_len)){
                         case 1:
-                            arp_scan_range(network, sockfd, "wlan0", my_mac, &ip);
+                            arp_scan_range(network, sockfd, interface, my_mac, &ip);
                             break;
                         case 2:
                             return;

@@ -80,13 +80,14 @@ int main(int argc, char *argv[]){
 
     JammerArgs jammer_args = {
         .network = &network,
+        .interface = args.interface,
         .stop_flag = &stop_flag
     };
     pthread_create(&jam_thread, NULL, jam_jammed_devices, &jammer_args);
 
     sockfd_scanner = arp_create_socket();
     if (sockfd_scanner != -1){
-        scanner_process(network, sockfd_scanner, args.ip);
+        scanner_process(network, sockfd_scanner, args.ip, args.interface);
     }
     handle_sigint(0);
 }

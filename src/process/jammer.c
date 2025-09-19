@@ -16,7 +16,7 @@ void *jam_jammed_devices(void *arg) {
 
     int sockfd = arp_create_socket();
     uint8_t my_mac[6];
-    get_interface_mac("wlan0", my_mac);
+    get_interface_mac(args->interface, my_mac);
 
     int cleanup = 3;
     while (cleanup) {
@@ -37,13 +37,13 @@ void *jam_jammed_devices(void *arg) {
                 if (status == JAMMING) {
                     uint32_t device_ip = htonl(device_client->ip);
 
-                    arp_send_reply(sockfd, "wlan0", my_mac, &device_ip, device_router->mac, &router_ip);
-                    arp_send_reply(sockfd, "wlan0", my_mac, &router_ip, device_client->mac, &device_ip);
+                    arp_send_reply(sockfd, args->interface, my_mac, &device_ip, device_router->mac, &router_ip);
+                    arp_send_reply(sockfd, args->interface, my_mac, &router_ip, device_client->mac, &device_ip);
                 } else if (status == DISCONNECTING) {
                     uint32_t device_ip = htonl(device_client->ip);
 
-                    arp_send_reply(sockfd, "wlan0", device_client->mac, &device_ip, device_router->mac, &router_ip);
-                    arp_send_reply(sockfd, "wlan0", device_router->mac, &router_ip, device_client->mac, &device_ip);
+                    arp_send_reply(sockfd, args->interface, device_client->mac, &device_ip, device_router->mac, &router_ip);
+                    arp_send_reply(sockfd, args->interface, device_router->mac, &router_ip, device_client->mac, &device_ip);
 
                     if (device_client->disconnecting_counter++ > 4) {
                         device_client->status = INACTIVE;

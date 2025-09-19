@@ -10,6 +10,6 @@
 #define CLEAR_SCREEN_FROM_CURSOR "\033[J"
 
 void disable_raw_mode();
-void scanner_process(Network network, int sockfd, uint32_t ip);
+void scanner_process(Network network, int sockfd, uint32_t ip, const char *interface);
 
 #endif
