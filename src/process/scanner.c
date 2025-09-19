@@ -148,7 +148,7 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
     } else if (strcmp(input, "die") == 0) {
         pthread_mutex_lock(&network.lock);
         for (size_t i=0;i<network.device_count;i++){
-            if (group.devices[i]->type != CLIENT) {
+            if (network.devices[i].type != CLIENT) {
                 continue;
             }
             if (network.devices[i].status == JAMMING) {

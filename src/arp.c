@@ -230,8 +230,6 @@ void arp_scan_range(Network network,
             if (index != -1) {
                 network.devices[index].alive = true;
                 memcpy(network.devices[index].mac, reply_mac, MAC_LEN); 
-            } else {
-                fprintf(stderr, "Device not found\n");
             }
             pthread_mutex_unlock(&network.lock);
         } else if (res == -2 || res == -1) {

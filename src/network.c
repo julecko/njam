@@ -125,7 +125,7 @@ void network_set_dead(Network network) {
 size_t network_count_alive(Network network) {
     size_t counter = 0;
     for (size_t i = 0;i<network.device_count;i++) {
-        if (network.devices[i].alive) {
+        if (network.devices[i].alive || network.devices[i].status == JAMMING) {
             counter++;
         }
     }
