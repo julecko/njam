@@ -158,7 +158,7 @@ static int handle_enter(Network network, char *input, size_t *input_len) {
         pthread_mutex_unlock(&network.lock);
     } else if (strcmp(input, "armagedon") == 0) {
         pthread_mutex_lock(&network.lock);
-        for (size_t i=0;i<network.device_count;i++){
+        for (size_t i=1;i<network.device_count;i++){
             if (network.devices[i].type != CLIENT) {
                 continue;
             }
