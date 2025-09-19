@@ -1,3 +1,4 @@
+#include "./version.h"
 #include "./argparse.h"
 #include "./ip_utils.h"
 #include "./mask_utils.h"
@@ -17,10 +18,6 @@
 
 #include <netinet/in.h>
 
-
-#ifndef VERSION
-#define VERSION "unknown"
-#endif
 
 volatile bool stop_flag = false;
 Network *global_network = NULL;
@@ -64,6 +61,13 @@ void ensure_root() {
 }
 
 int main(int argc, char *argv[]){
+    if (argc == 2) {
+        const char *arg = argv[1];
+        if (strcmp(arg, "-v") == 0 || strcmp(arg, "--version") == 0) {
+            print_version();
+            return EXIT_SUCCESS;
+        }
+    }
     ensure_root();
 
     Args args = {0};

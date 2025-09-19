@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(njam C)
 
-set(NJAM_VERSION "1.0.0")
+set(NJAM_VERSION "2.0.1")
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -35,6 +35,7 @@ add_executable(njam
     src/network.c
     src/icmp.c
     src/arp.c
+    src/version.c
     src/process/jammer.c
     src/process/scanner.c
 )
