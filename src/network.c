@@ -38,7 +38,7 @@ Network create_network(uint32_t ip, uint32_t mask) {
 
 
     for (size_t i = 0; i < network.device_count; i++) {
-        network.devices[i].ip = network.networkIP + i;
+        network.devices[i].ip = network.networkIP + i + 1;
         network.devices[i].alive = false;
     }
 
