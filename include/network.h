@@ -46,7 +46,7 @@ void free_network(Network network);
 void print_network(Network network);
 size_t network_count_inactive(const Network network);
 size_t network_find_by_ip(Network network, uint32_t ip);
-size_t network_count_alive(Network network);
+size_t network_count_alive_or_jammed(Network network);
 DeviceGroup print_network_nice(Network network, size_t offset, size_t max_visible);
 
 #endif

@@ -108,7 +108,7 @@ size_t network_count_inactive(const Network network) {
     }
 
     size_t counter = 0;
-    for (size_t i = 0; i < network.device_count; i++) {
+    for (size_t i = 0; i <= network.device_count; i++) {
         if (network.devices[i].status == INACTIVE) {
             counter++;
         }
@@ -117,15 +117,15 @@ size_t network_count_inactive(const Network network) {
 }
 
 void network_set_dead(Network network) {
-    for (size_t i = 0;i<network.device_count;i++) {
+    for (size_t i = 0;i<=network.device_count;i++) {
         network.devices[i].alive = false;
     }
 }
 
-size_t network_count_alive(Network network) {
+size_t network_count_alive_or_jammed(Network network) {
     size_t counter = 0;
-    for (size_t i = 0;i<network.device_count;i++) {
-        if (network.devices[i].alive || network.devices[i].status == JAMMING) {
+    for (size_t i = 0;i<=network.device_count;i++) {
+        if (network.devices[i].alive || network.devices[i].status == JAMMING || network.devices[i].status == DISCONNECTING) {
             counter++;
         }
     }
@@ -140,19 +140,19 @@ static void clear_lines(int n) {
 }
 
 DeviceGroup print_network_nice(Network network, size_t offset, size_t max_visible) {
-    size_t alive_count = network_count_alive(network);
+    size_t jammed_or_alive_count = network_count_alive_or_jammed(network);
     DeviceGroup group = {0};
 
-    if (alive_count == 0) {
+    if (jammed_or_alive_count == 0) {
         printf("No alive devices found.\n");
         return group;
     }
 
-    if (offset > alive_count) offset = alive_count;
-    if (offset + max_visible > alive_count)
-        max_visible = alive_count - offset;
+    if (offset > jammed_or_alive_count) offset = jammed_or_alive_count;
+    if (offset + max_visible > jammed_or_alive_count)
+        max_visible = jammed_or_alive_count - offset;
 
-    group.devices = calloc(alive_count, sizeof(Device*));
+    group.devices = calloc(jammed_or_alive_count, sizeof(Device*));
     if (!group.devices) {
         perror("calloc");
         return group;
@@ -164,9 +164,10 @@ DeviceGroup print_network_nice(Network network, size_t offset, size_t max_visibl
     printf(" %3s  %-15s  %-17s  %-6s  %-7s\n", "ID", "IP", "MAC", "Alive", "Jamming");
     printf("───────────────────────────────────────────────────────────────\n");
 
-    for (size_t i = 0; i < network.device_count; i++) {
-        if (!network.devices[i].alive && network.devices[i].status == INACTIVE) continue;
-        group.devices[idx++] = &network.devices[i];
+    for (size_t i = 0; i <= network.device_count; i++) {
+        if (network.devices[i].alive || network.devices[i].status == JAMMING || network.devices[i].status == DISCONNECTING) {
+            group.devices[idx++] = &network.devices[i];
+        }
     }
     group.device_count = idx;
 
