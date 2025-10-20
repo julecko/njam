@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(njam C)
 
-set(NJAM_VERSION "2.0.3")
+set(NJAM_VERSION "2.0.4")
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -20,11 +20,13 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 # Debug/Release compiler flags
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(DEBUG_MODE=1)
-    add_compile_options(-g -O0)
+    add_compile_options(-g -O0 -fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
 else()
     add_compile_definitions(NDEBUG)
     add_compile_options(-O3)
 endif()
+
 
 # Executable 1: njam
 add_executable(njam

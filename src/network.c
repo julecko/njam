@@ -108,7 +108,7 @@ size_t network_count_inactive(const Network network) {
     }
 
     size_t counter = 0;
-    for (size_t i = 0; i <= network.device_count; i++) {
+    for (size_t i = 0; i < network.device_count; i++) {
         if (network.devices[i].status == INACTIVE) {
             counter++;
         }
@@ -117,14 +117,14 @@ size_t network_count_inactive(const Network network) {
 }
 
 void network_set_dead(Network network) {
-    for (size_t i = 0;i<=network.device_count;i++) {
+    for (size_t i = 0;i < network.device_count;i++) {
         network.devices[i].alive = false;
     }
 }
 
 size_t network_count_alive_or_jammed(Network network) {
     size_t counter = 0;
-    for (size_t i = 0;i<=network.device_count;i++) {
+    for (size_t i = 0;i < network.device_count;i++) {
         if (network.devices[i].alive || network.devices[i].status == JAMMING || network.devices[i].status == DISCONNECTING) {
             counter++;
         }
@@ -164,7 +164,7 @@ DeviceGroup print_network_nice(Network network, size_t offset, size_t max_visibl
     printf(" %3s  %-15s  %-17s  %-6s  %-7s\n", "ID", "IP", "MAC", "Alive", "Jamming");
     printf("───────────────────────────────────────────────────────────────\n");
 
-    for (size_t i = 0; i <= network.device_count; i++) {
+    for (size_t i = 0; i < network.device_count; i++) {
         if (network.devices[i].alive || network.devices[i].status == JAMMING || network.devices[i].status == DISCONNECTING) {
             group.devices[idx++] = &network.devices[i];
         }
