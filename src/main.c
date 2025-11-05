@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/capability.h>
 
 #include <netinet/in.h>
 
@@ -53,14 +54,28 @@ void handle_sigint(int signum) {
     exit(0);
 }
 
-void ensure_root() {
+bool has_cap_net_raw() {
+    cap_t caps = cap_get_proc();
+    if (!caps) return 0;
+
+    cap_flag_value_t val;
+    cap_get_flag(caps, CAP_NET_RAW, CAP_EFFECTIVE, &val);
+
+    cap_free(caps);
+    return (val == CAP_SET);
+}
+
+bool has_root() {
     if (geteuid() != 0) {
-        fprintf(stderr, "[!] This program must be run as root (use sudo).\n");
-        exit(EXIT_FAILURE);
+        return false;
     }
+    return true;
 }
 
 int main(int argc, char *argv[]){
+    printf("%i\n", has_cap_net_raw());
+
+    exit(0);
     if (argc == 2) {
         const char *arg = argv[1];
         if (strcmp(arg, "-v") == 0 || strcmp(arg, "--version") == 0) {
@@ -68,7 +83,9 @@ int main(int argc, char *argv[]){
             return EXIT_SUCCESS;
         }
     }
-    ensure_root();
+    if (!has_root() && !has_cap_net_raw()) {
+        fprintf(stderr, "[!] This program must be run as root (use sudo) or have cap_net_raw capabilities.\n");
+    }
 
     Args args = {0};
     if (!parse_args(&args, argc, (const char **)argv)) {
@@ -76,6 +93,9 @@ int main(int argc, char *argv[]){
         print_usage();
         return EXIT_FAILURE;
     }
+
+    sockfd_scanner = arp_create_socket();
+    
 
     signal(SIGINT, handle_sigint);
 
@@ -89,7 +109,6 @@ int main(int argc, char *argv[]){
     };
     pthread_create(&jam_thread, NULL, jam_jammed_devices, &jammer_args);
 
-    sockfd_scanner = arp_create_socket();
     if (sockfd_scanner != -1){
         scanner_process(network, sockfd_scanner, args.ip, args.interface);
     }

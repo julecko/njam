@@ -42,6 +42,11 @@ add_executable(njam
     src/process/scanner.c
 )
 
+target_link_libraries(njam PRIVATE
+    cap
+)
+
+
 target_include_directories(njam PRIVATE
     ${PROJECT_SOURCE_DIR}/include
 )
