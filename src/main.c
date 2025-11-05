@@ -84,7 +84,7 @@ int main(int argc, char *argv[]){
         }
     }
     if (!has_root() && !has_cap_net_raw()) {
-        fprintf(stderr, "[!] This program must be run as root (use sudo) or have cap_net_raw capabilities.\n");
+        fprintf(stderr, "[!] This program must be run as root (use sudo) or have cap_net_raw+ep capabilities.\n");
     }
 
     Args args = {0};
